@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	
+		<meta charset="utf-8"/>
+		<title>Simulador</title>
+
+		<link rel="stylesheet" href="css/jquery.ui.all.css">
+		<script src="lib/jquery-1.9.1.js"></script>
+		<script src="lib/jquery.ui.core.js"></script>
+		<script src="lib/jquery.ui.widget.js"></script>
+		<script src="lib/jquery.ui.mouse.js"></script>
+		<script src="lib/jquery.ui.draggable.js"></script>
+		<script src="lib/jquery.ui.position.js"></script>
+		<script src="lib/jquery.ui.resizable.js"></script>
+		<script src="lib/jquery.ui.button.js"></script>
+		<script src="lib/jquery.ui.dialog.js"></script>
+		<script src="lib/kinetic-v4.7.2.min.js"></script>
+		<script src="lib/sylvester.js"></script>
+		<style>
+			ul{
+				list-style: none;
+				min-height: 90px;
+				width: 72px;
+			}
+			li {
+				width: 72px;
+				height: 72px;
+				margin-top: 18px;
+			}
+			li img{
+				float: left;
+				width: 72px;
+				height: 72px;
+			}
+			li div{
+				border: 0.15em solid gray;
+				width: 72px;
+				height: 72px;
+			}
+			li div:hover{
+				border: 0.15em solid blue;
+			}
+		</style>
+	</head>
+	
+	<body>
+		<ul>Panel
+			<li><div><img src="img/V.png" id="Vmenu"/></div></li>
+			<li><div><img src="img/R.png" id="Rmenu"/></div></li>
+			<li><div><img src="img/C.png" id="Cmenu"/></div></li>
+			<li><div><img src="img/G.png" id="Gmenu"/></div></li>
+		</ul>
+		
+		<div id="editor" title="editor">
+			<label for="value" id="label">Valor</label><input type="number" id="value"/><br>
+			<button id="save">salvar</button>|<button id="cancel">cancelar</button>
+		</div>
+		
+		<br><button id="solve">Resolver</button>
+		
+		<div id="contenedor"></div>
+		
+		<script src="element.js"></script>
+		<script src="CSim.js"></script>
+		<script>
+			CSim.load();
+		</script>	
+		
+	</body>
+
+</html>
