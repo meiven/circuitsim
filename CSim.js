@@ -39,7 +39,7 @@ CSim = {
 		CSimCanvas._load();	
 		this._initListeners();
 		this._inicializar();
-		this._inicialiazarmatrices();
+		this._inicializarmatrices();
 		CSimCanvas._dibujarMalla();
 
 	},//end load
@@ -57,7 +57,8 @@ CSim = {
 		document.getElementById('solve').addEventListener('click', CSim._solve );
 		document.getElementById('saveCircuit').addEventListener('click', CSim._saveCircuit);
 		document.getElementById('loadCircuit').addEventListener('click', CSim._loadCircuit);
-	    
+	    document.getElementById('deleteall').addEventListener('click', CSim._deleteall); //ztest
+		
 		window.addEventListener('mousedown', this._mousedown, true);
 		window.addEventListener('touchstart', this._mousedown, true);
 	    window.addEventListener('keydown', this._keywindow, false);
@@ -98,19 +99,20 @@ CSim = {
 		this._xmax = 0;
 		this._ymax = 0;
 		
+		//this.elements = [];
 		this._solution = "";
 		
 		CSimEditor.init();
 	},
-	_inicialiazarmatrices : function (){
+	_inicializarmatrices : function (){
 		for (var i=0; i<CSimCanvas.anchura*2/this._malla; i++){
 			this._matrizcables[i] = [];
 			this._matrizcircuito[i] = [];
 			this._matriznodos[i] = [];
 			for (var j=0; j<CSimCanvas.altura*2/this._malla; j++){	
-				this._matrizcables[i][j] = ".";
-				this._matrizcircuito[i][j] = ".";
-				this._matriznodos[i][j] = ".";
+				this._matrizcables[i][j] = '.';
+				this._matrizcircuito[i][j] = '.';
+				this._matriznodos[i][j] = '.';
 			}
 		}
 	},
@@ -284,19 +286,19 @@ CSim = {
 						var vleft = this._matriznodos[i-1][j];
 						
 						//nueva esquina
-						if (vtop=="." && vleft=="."){
+						if (vtop=='.' && vleft=='.'){
 							this._matriznodos[i][j] = nodetemp;
 							temptoreal[nodetemp]= nodetemp;
 							nodetemp ++;
 						}
 						
 						//continuación de cable horizontal
-						if (vtop=="." && typeof vleft == "number"){
+						if (vtop=='.' && typeof vleft == "number"){
 							this._matriznodos[i][j] = vleft;
 						}
 						
 						//continuación de cable vertical
-						if (vleft=="." && typeof vtop == "number"){
+						if (vleft=='.' && typeof vtop == "number"){
 							this._matriznodos[i][j] = vtop;
 						}
 						
@@ -612,7 +614,7 @@ CSim = {
 				text:  soltext,
 				fontSize: 18, //TODO ajustar a tamaño pantalla
 				fontFamily: 'calibri',
-				fontStyle: 'bold',
+				//fontStyle: 'bold',
 				fill: 'darkblue',
 				draggable: true
 			});
@@ -642,7 +644,7 @@ CSim = {
 			var str = "\n";
 			for (var j=this._ymin*2/this._malla; j<=this._ymax*2/this._malla; j+=2){	
 				for (var i=this._xmin*2/this._malla; i<=this._xmax*2/this._malla; i+=2){
-					(this._matriznodos[i][j] == ".") ? str += " " : str += this._matriznodos[i][j];
+					(this._matriznodos[i][j] == '.') ? str += " " : str += this._matriznodos[i][j];
 				}
 				str += "\n";
 			}
@@ -656,27 +658,60 @@ CSim = {
 		}
 	},
 	_saveCircuit : function(){	
-		var jsonobj = {
+		
+		var elemlist = [];
+		for (var i in CSim.elements){
+			elemlist.push([CSim.elements[i].type, CSim.elements[i].x, CSim.elements[i].y, CSim.elements[i].value, CSim.elements[i].rotation]);
+		}
+		var jsonelemlist = JSON.stringify(elemlist);
+		var jsonmatrizcables = JSON.stringify(CSim._matrizcables);
+		var jsonobject = {
 			"xmin": CSim._xmin,
 			"xmax": CSim._xmax,
 			"ymin": CSim._ymin,
-			"ymax": CSim._ymax
+			"ymax": CSim._ymax,
+			"cableado": jsonmatrizcables,
+			"elementos": jsonelemlist
 		}
-		
-		var jsonstring = JSON.stringify(jsonobj);
-		
+		var jsonstring = JSON.stringify(jsonobject);
 		$.post("savejson.php", {json: jsonstring})
 		.done(function(){
-			console.log("circuito guardado"); //z
+			CSim._say("circuito guardado");
 		});
 	},
 	_loadCircuit : function(){
 		$.ajax({dataType: 'json', url: 'loadjson.php', async: false,})
 		.done(function(data) {
-			var loadedCircuit = data;
-			console.log("circuito cargado"); //z
-			console.log(loadedCircuit); //z
+			CSim._xmin = data.xmin;
+			CSim._xmax = data.xmax;
+			CSim._ymin = data.ymin;
+			CSim._ymax = data.ymax;
+			CSim._matrizcables = JSON.parse(data.cableado);
+			
+			//CSim._deleteall();
+			var elemlist = JSON.parse(data.elementos);
+			for (var i=0; i<elemlist.length; i++){
+				var elem = new CSimElement(elemlist[i][0], elemlist[i][1], elemlist[i][2], elemlist[i][3], elemlist[i][4], false);
+			}
+			
+			for (var j=CSim._ymin*2/CSim._malla; j<=CSim._ymax*2/CSim._malla; j++){	
+				for (var i=CSim._xmin*2/CSim._malla; i<=CSim._xmax*2/CSim._malla; i++){
+					if (CSim._matrizcables[i][j] == "w"){
+						if (CSim._matrizcables[i+1][j] == "w")
+							CSimCanvas._drawtempline(i*CSim._malla/2, j*CSim._malla/2, (i+1)*CSim._malla/2, j*CSim._malla/2);
+						if (CSim._matrizcables[i][j+1] == "w")
+							CSimCanvas._drawtempline(i*CSim._malla/2, j*CSim._malla/2, i*CSim._malla/2, (j+1)*CSim._malla/2);	
+					}
+				}
+			}
 		});
+	},
+	_deleteall : function(){
+		CSim._inicializar();
+		CSim._inicializarmatrices();
+
+		CSimCanvas._load();
+		CSimCanvas._dibujarMalla();
 	},
 	_keywindow : function(e){
 		//console.info(e.which);
@@ -684,6 +719,7 @@ CSim = {
 			if (e.which == 82){
 				if (CSim._selectedimg != ""){
 					CSim._selectedimg.rotate(Math.PI/2);
+					CSim._selectedimg.getAttr("elem").rotation = CSim._selectedimg.getAttr("rotation");
 					CSimCanvas._circuitlayer.draw();
 					CSim._mostrarnodos(); //
 				}
@@ -718,25 +754,25 @@ CSim = {
 	}
 }
 
-CSimElement = function(menuName, x, y){
+CSimElement = function(menuName, x, y, value, rotation, stroke){
 	this.type = menuName.charAt(0);
 	name = this.type+CSim.elemDef[this.type]['counter'];
 	if (this.type == "G") name = "";
 	this.name = name;
-	this.node1 = null;
-	this.node2 = null;
-	this.value = CSim.elemDef[this.type]['defValue'];
+	// this.node1 = null;
+	// this.node2 = null;
+	this.value = value || CSim.elemDef[this.type]['defValue'];
 	this.v = null;
 	this.r = null;
 	this.i = null;
 	this.x = x;
 	this.y = y;
+	this.rotation = rotation || 0;
 	
 	CSim.elemDef[this.type]['counter'] ++;
 	CSim.elements[this.name] = this;
 	
-	CSimCanvas._addElement(this);
-	
+	CSimCanvas._addElement(this, stroke);
 }
 CSimElement.prototype._addStyle = function(){
 	this.image.on("mouseover", function(){ document.body.style.cursor =  "pointer"; });
@@ -834,6 +870,8 @@ CSimElement.prototype._loadLabel = function(){
 }
 CSimElement.prototype._getelemcoordinates = function(){
 	
+	if (this.image == null){return;}
+	
 	var p=[this.image.getAttr("x"), this.image.getAttr("y")];
 	var rotation = this.image.getAttr("rotation") + CSim.elemDef[this.type].iniRotation;
 	
@@ -868,8 +906,10 @@ CSimEditor = {
 	input: document.getElementById('value'),
 	label: document.getElementById('label'),
 	init: function(){
-		document.getElementById('save').addEventListener('click tap', CSimEditor.save );
-	  	document.getElementById('cancel').addEventListener('click tap', CSimEditor.hide );
+		document.getElementById('save').addEventListener('click', CSimEditor.save );
+		document.getElementById('save').addEventListener('tap', CSimEditor.save );
+	  	document.getElementById('cancel').addEventListener('click', CSimEditor.hide );
+		document.getElementById('cancel').addEventListener('tap', CSimEditor.hide );
 	},
 	save: function(){
 		CSimEditor.elem.value = CSimEditor.input.value;
@@ -907,7 +947,7 @@ CSimDragop = {
 	  	var pos = CSimCanvas._getcoordinates(e);
 		var pos = CSimCanvas._ajustaramalla(pos[0] - offset[0], pos[1] - offset[1]);
 	  	
-		elem = new CSimElement(id, pos[0], pos[1]);
+		elem = new CSimElement(id, pos[0], pos[1],"","", true);
 	}
 }
 
@@ -933,7 +973,7 @@ CSimCanvas = {
 		this._labellayer = new Kinetic.Layer();
 		this._nodeslayer = new Kinetic.Layer();
 		this._solutionlayer = new Kinetic.Layer();
-		
+
 		this._stage.add(this._backgroundlayer);
 		this._stage.add(this._circuitlayer);
 		this._stage.add(this._labellayer);
@@ -978,21 +1018,23 @@ CSimCanvas = {
 		CSimCanvas.contenedor.addEventListener('touchmove', this._mousemove);
 		CSimCanvas.contenedor.addEventListener('touchend', this._mouseup);
 	},
-	_addElement : function(elem){
-		imageObj = new Image();
+	_addElement : function(elem, stroke){
+		var stroke = stroke || false;
+		var imageObj = new Image();
 		imageObj.name = elem.name;
 		imageObj.onload = function(e) {
 			var elem = CSim.elements[e.target.name];
 			var image = new Kinetic.Image({
 				x: elem.x,
 				y: elem.y,
+				rotation: elem.rotation,
 				image: imageObj,
 				width: CSim._elemsize,
 				height: CSim._elemsize,
 				offset: [CSim._elemsize/2, CSim._elemsize/2],
 				stroke: "blue",
 				strokeWidth: 0.7,
-				strokeEnabled: true,
+				strokeEnabled: stroke,
 				draggable: true
 			});
 
@@ -1018,18 +1060,29 @@ CSimCanvas = {
 		imageObj.src = "img/"+elem.type+".png";
 	},
 	_getcoordinates : function (ev){
-			try{
-				if( $.support.touch && event.touches.item(0) != null) 
-					ev = event.touches.item(0);
-				
-			}catch(e){ console.error(e); }
+		try{
+			if( $.support.touch && event.touches.item(0) != null) 
+				ev = event.touches.item(0);
 			
-			return [ev.clientX - $("#contenedor").position().left,
-					ev.clientY - $("#contenedor").position().top];
+		}catch(e){ console.error(e); }
+		
+		return [ev.clientX - $("#contenedor").position().left,
+				ev.clientY - $("#contenedor").position().top];
 	},
 	_ajustaramalla : function (x,y){
-			return [Math.round(x/CSim._malla)*CSim._malla,
-					Math.round(y/CSim._malla)*CSim._malla];
+		return [Math.round(x/CSim._malla)*CSim._malla,
+				Math.round(y/CSim._malla)*CSim._malla];
+	},
+	_drawtempline : function (x1,y1,x2,y2){
+		CSimCanvas._templine = new Kinetic.Line({
+			points: [x1,y1,x2,y2],
+			stroke: "black",
+			strokeWidth: CSim._cablewidth,
+			lineCap: 'round',
+			lineJoin: 'round'
+		});
+		CSimCanvas._circuitlayer.add(CSimCanvas._templine);
+		CSimCanvas._circuitlayer.draw();
 	},
 	_mousedown : function (ev){
 		if ( ! CSimCanvas._wiring ){return;}
@@ -1068,7 +1121,6 @@ CSimCanvas = {
 			var x = p[0]; var y = p[1];
 			
 			//if( x-CSimCanvas._x0 < 2* CSim._malla && y-CSimCanvas._y0 < 2*CSim._malla ) return false;
-			
 			if (CSimCanvas._dir == "" && Math.abs(x-CSimCanvas._x0) + Math.abs(y-CSimCanvas._y0) > 3*CSim._malla){
 				(Math.abs(x-CSimCanvas._x0)>2*CSim._malla) ? CSimCanvas._dir = "horizontal" : CSimCanvas._dir = "vertical";
 			}
@@ -1097,7 +1149,6 @@ CSimCanvas = {
 					break;
 			}	
 			
-			
 			CSimCanvas._x2 = x;
 			CSimCanvas._y2 = y;
 				
@@ -1111,13 +1162,10 @@ CSimCanvas = {
 	},
 	_mouseup : function (ev){ 
 		//console.info(ev);
-		
 		if (CSimCanvas._drawing){
 
 			CSimCanvas._drawing = false;
 			CSimCanvas._drawinglayer.remove();			
-			// var p = CSimCanvas._getcoordinates(ev);
-			// p = CSimCanvas._ajustaramalla(p[0], p[1]);
 			
 			if (CSimCanvas._x0 != CSimCanvas._x1 || CSimCanvas._y0 != CSimCanvas._y1){
 				CSim._addtomatrix(CSimCanvas._x0, CSimCanvas._y0, CSimCanvas._x1, CSimCanvas._y1, 'w', CSim._matrizcables);
