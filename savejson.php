@@ -1,8 +1,8 @@
 <?php
 
-$jsonstring = $_POST['json'];
+$jsonString = $_POST['json'];
 $jsonFile = fopen('circuit.json','w+');
-fwrite($jsonFile,$jsonstring);
+fwrite($jsonFile,$jsonString);
 fclose($jsonFile);
 
 ?>
